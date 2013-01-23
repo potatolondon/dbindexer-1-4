@@ -41,14 +41,9 @@ class BaseDatabaseWrapper(object):
         self.ops.__init__()
 
 def DatabaseWrapper(settings_dict, *args, **kwargs):
-    target_settings = settings.DATABASES[settings_dict['TARGET']]
-    engine = target_settings['ENGINE'] + '.base'
+    engine = settings.DBINDEXER_TARGET_ENGINE + ".base"
     target = import_module(engine).DatabaseWrapper
     class Wrapper(BaseDatabaseWrapper, target):
         pass
 
-    # Update settings with target database settings (which can contain nested dicts).
-    merged_settings = settings_dict.copy()
-    merge_dicts(merged_settings, target_settings)
-
-    return Wrapper(merged_settings, *args, **kwargs)
+    return Wrapper(settings_dict, *args, **kwargs)
