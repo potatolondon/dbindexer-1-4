@@ -56,13 +56,13 @@ class BaseResolver(object):
         if not lookup.model == query.model:
             return
 
-        position = self.get_query_position(query, lookup)
-        if position is None:
-            return
-
-        value = self.get_value(lookup.model, lookup.field_name, query)
-        value = lookup.convert_value(value)
-        query.values[position] = (self.get_index(lookup), value)
+        values = self.get_value(lookup.model, lookup.field_name, query)
+        for i, obj in enumerate(query.objs):
+            value = lookup.convert_value(values[i])
+            field = obj._meta.get_field(lookup.index_name)
+            if field.rel:
+                value = field.rel.to.objects.get(pk=value)
+            setattr(obj, lookup.index_name, value)
 
     def convert_filters(self, query):
         self._convert_filters(query, query.where)
@@ -115,10 +115,16 @@ class BaseResolver(object):
 
     def get_value(self, model, field_name, query):
         field_to_index = self.get_field_to_index(model, field_name)
-        for query_field, value in query.values[:]:
-            if field_to_index == query_field:
-                return value
-        raise FieldDoesNotExist('Cannot find field in query.')
+
+        if field_to_index not in query.fields:
+            raise FieldDoesNotExist('Cannot find field in query.')
+
+        values = []
+        for obj in query.objs:
+            value = field_to_index.value_from_object(obj)
+            values.append(value)
+
+        return values
 
     def add_column_to_name(self, model, field_name):
         column_name = model._meta.get_field(field_name).column
@@ -128,7 +134,7 @@ class BaseResolver(object):
         return self.index_map[lookup]
 
     def get_query_position(self, query, lookup):
-        for index, (field, query_value) in enumerate(query.values[:]):
+        for index, field in enumerate(query.fields):
             if field is self.get_index(lookup):
                 return index
         return None
@@ -223,12 +229,14 @@ class ConstantFieldJOINResolver(BaseResolver):
             field_name)
 
     def get_value(self, model, field_name, query):
-        value = super(ConstantFieldJOINResolver, self).get_value(model,
+        values = super(ConstantFieldJOINResolver, self).get_value(model,
                                     field_name.split('__')[0],
                                     query)
-        if value is not None:
-            value = self.get_target_value(model, field_name, value)
-        return value
+
+        for i, obj in enumerate(query.objs):
+            if values[i] is not None:
+                values[i] = self.get_target_value(model, field_name, values[i])
+        return values
 
     def get_field_chain(self, query, constraint):
         if constraint.field is None:

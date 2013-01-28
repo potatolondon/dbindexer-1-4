@@ -34,8 +34,26 @@ class SQLCompiler(BaseCompiler):
 
 class SQLInsertCompiler(BaseCompiler):
     def execute_sql(self, return_id=False):
+        # This is a bit hacky. execute_sql in the parent class
+        # is responsible for calling pre_save unless the query
+        # is a raw query. We need pre_save to be called so that
+        # auto_now type fields are populated. So we call pre_save
+        # ourselves, and mark the query as raw so pre_save isn't called
+        # twice, then we set it back to its original value
+
+        for obj in self.query.objs:
+            for field in self.query.fields:
+                field.pre_save(obj, obj._state.adding)
+
+        original_state = self.query.raw
+        self.query.raw = True
+
         resolver.convert_insert_query(self.query)
-        return super(SQLInsertCompiler, self).execute_sql(return_id=return_id)
+        result = super(SQLInsertCompiler, self).execute_sql(return_id=return_id)
+
+        if self.query.raw != original_state:
+            self.query.raw = original_state
+        return result
 
 class SQLUpdateCompiler(BaseCompiler):
     pass
