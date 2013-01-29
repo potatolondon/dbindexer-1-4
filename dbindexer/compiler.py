@@ -43,7 +43,8 @@ class SQLInsertCompiler(BaseCompiler):
 
         for obj in self.query.objs:
             for field in self.query.fields:
-                field.pre_save(obj, obj._state.adding)
+                if not field.rel: #Don't do anything to related objects
+                    setattr(obj, field.name, field.pre_save(obj, obj._state.adding))
 
         original_state = self.query.raw
         self.query.raw = True

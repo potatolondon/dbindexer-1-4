@@ -114,6 +114,8 @@ class BaseResolver(object):
             return None
 
     def get_value(self, model, field_name, query):
+        from django.db import router, connections
+
         field_to_index = self.get_field_to_index(model, field_name)
 
         if field_to_index not in query.fields:
@@ -121,7 +123,10 @@ class BaseResolver(object):
 
         values = []
         for obj in query.objs:
-            value = field_to_index.value_from_object(obj)
+            value = field_to_index.get_db_prep_save(
+                field_to_index.value_from_object(obj),
+                connections[router.db_for_read(model)]
+            )
             values.append(value)
 
         return values
