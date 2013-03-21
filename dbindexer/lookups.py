@@ -147,7 +147,7 @@ class Icontains(Contains):
     lookup_types = 'icontains'
 
     def convert_value(self, value):
-        return [val.lower() for val in Contains.convert_value(self, value)]
+        return [val.lower() for val in Contains.convert_value(self, value)] or None
 
     def _convert_lookup(self, value, lookup_type):
         return self.new_lookup, value.lower()

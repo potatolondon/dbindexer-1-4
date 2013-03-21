@@ -85,7 +85,7 @@ class TestIndexed(TestCase):
         })
 
         register_index(NullableCharField, {
-             'name': ('iexact', 'istartswith', 'endswith', 'iendswith',)
+             'name': ('iexact', 'istartswith', 'endswith', 'iendswith', 'icontains')
         })
 
     # TODO: add tests for created indexes for all backends!
@@ -208,6 +208,20 @@ class TestIndexed(TestCase):
         self.assertEqual(4, len(Indexed.objects.all().filter(published__year=now.year)))
         self.assertEqual(4, len(Indexed.objects.all().filter(
             published__week_day=now.isoweekday())))
+
+    def test_order_by_strings(self):
+        """Test query with nullable CharFields"""
+
+        abba = NullableCharField(name='Abba')
+        abba.save()
+        empty = NullableCharField()
+        empty.save()
+
+        query = NullableCharField.objects.all().order_by('idxf_name_l_icontains')
+        # This one returns the right answer.
+        self.assertEqual(2, query.count())
+        qlist = list(query)
+        self.assertEqual(2, len(qlist))
 
     def test_null_strings(self):
         """Test indexing with nullable CharFields, see: https://github.com/django-nonrel/django-dbindexer/issues/3."""
