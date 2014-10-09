@@ -175,7 +175,7 @@ class FKNullFix(BaseResolver):
     def convert_filter(self, query, filters, child, index):
         constraint, lookup_type, annotation, value = child
         if constraint.field is not None and lookup_type == 'isnull' and \
-                        isinstance(constraint.field, models.ForeignKey):
+                        getattr(constraint.field, 'rel', None):
             self.fix_fk_null_filter(query, constraint)
 
     def unref_alias(self, query, alias):
