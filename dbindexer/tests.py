@@ -161,6 +161,14 @@ class TestIndexed(TestCase):
         self.assertEqual(0, len(Indexed.objects.filter(foreignkey=None)))
         self.assertEqual(4, len(Indexed.objects.exclude(foreignkey=None)))
 
+    def test_fk_isnull_leak(self):
+        qs = Indexed.objects.filter(foreignkey=None)
+        qs_copy = qs._clone()
+        # test fixing the query doesn't affect it's copies
+        self.assertEqual(0, len(qs_copy))
+        self.assertEqual(0, len(qs))
+
+
     def test_iexact(self):
         self.assertEqual(1, len(Indexed.objects.filter(name__iexact='itaChi')))
         self.assertEqual(1, Indexed.objects.filter(name__iexact='itaChi').count())
